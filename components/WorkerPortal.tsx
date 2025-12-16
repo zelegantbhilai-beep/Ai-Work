@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Calendar, Clock, LogOut, User, MapPin, CheckCircle, Wallet, Briefcase, Power, DollarSign, Phone, Menu, X, Headphones, ChevronDown, ChevronUp, Send, HelpCircle } from 'lucide-react';
+import { Calendar, Clock, LogOut, User, MapPin, CheckCircle, Wallet, Briefcase, Power, DollarSign, Phone, Menu, X, Headphones, ChevronDown, ChevronUp, Send, HelpCircle, Save } from 'lucide-react';
 import { Worker, JobRequest } from '../types';
 
 interface WorkerPortalProps {
@@ -38,6 +38,15 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ worker, onLogout, on
   const [supportMsg, setSupportMsg] = useState('');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+  // Edit Profile State
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    phone: '',
+    area: '',
+    description: ''
+  });
+
   const handleAcceptLead = (lead: JobRequest) => {
     setLeads(leads.filter(l => l.id !== lead.id));
     setSchedule([...schedule, { ...lead, status: 'ACCEPTED' }]);
@@ -74,6 +83,25 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ worker, onLogout, on
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const openEditProfile = () => {
+    setEditFormData({
+      name: worker.name,
+      phone: worker.phone,
+      area: worker.area,
+      description: worker.description
+    });
+    setShowEditProfileModal(true);
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateWorker({
+      ...worker,
+      ...editFormData
+    });
+    setShowEditProfileModal(false);
   };
 
   return (
@@ -432,7 +460,10 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ worker, onLogout, on
                     </div>
                     
                     <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                      <button className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-xl font-bold hover:bg-black dark:hover:bg-gray-200 transition-colors shadow-lg">
+                      <button 
+                        onClick={openEditProfile}
+                        className="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-xl font-bold hover:bg-black dark:hover:bg-gray-200 transition-colors shadow-lg"
+                      >
                         Edit Profile Details
                       </button>
                     </div>
@@ -512,6 +543,66 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({ worker, onLogout, on
 
         </main>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditProfileModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowEditProfileModal(false)} />
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 relative z-10 animate-in zoom-in-95 duration-200 border dark:border-gray-700">
+             <button onClick={() => setShowEditProfileModal(false)} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+               <X className="w-5 h-5" />
+             </button>
+             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Edit Profile Details</h3>
+             
+             <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div>
+                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Full Name</label>
+                   <input 
+                     type="text" 
+                     required
+                     className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     value={editFormData.name}
+                     onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                   />
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Phone Number</label>
+                   <input 
+                     type="text" 
+                     required
+                     className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     value={editFormData.phone}
+                     onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                   />
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Service Area</label>
+                   <input 
+                     type="text" 
+                     required
+                     className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     value={editFormData.area}
+                     onChange={(e) => setEditFormData({...editFormData, area: e.target.value})}
+                   />
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Bio</label>
+                   <textarea 
+                     rows={4} 
+                     className="w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-800 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     value={editFormData.description}
+                     onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                   ></textarea>
+                </div>
+                <div className="pt-2">
+                   <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg flex items-center justify-center gap-2">
+                     <Save className="w-4 h-4" /> Save Changes
+                   </button>
+                </div>
+             </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
