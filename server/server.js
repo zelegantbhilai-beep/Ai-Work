@@ -2,8 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-// const { Pool } = require("pg"); // Removed to prevent build errors if pg is not installed, as we use a mock db below.
+const bcrypt = require("bcryptjs"); // Changed to bcryptjs for Vercel compatibility
 
 const app = express();
 app.use(cors());
@@ -78,7 +77,6 @@ app.put("/api/v1/admin/workers/:id", authenticateToken, verifyAdmin, async (req,
   // EDIT/UPDATE Worker details
   const { id } = req.params;
   const updates = req.body;
-  // db.query('UPDATE workers SET ... WHERE id = $1', [id, ...])
   res.json({ message: `Worker ${id} updated`, updates });
 });
 
