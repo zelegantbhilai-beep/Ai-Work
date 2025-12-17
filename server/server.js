@@ -1,8 +1,9 @@
 
-const express = require("express");
-const cors = require("cors");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs"); // Changed to bcryptjs for Vercel compatibility
+import express from 'express';
+import cors from 'cors';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { fileURLToPath } from 'url';
 
 const app = express();
 app.use(cors());
@@ -148,10 +149,10 @@ app.post("/api/v1/consumer/feedback", authenticateToken, async (req, res) => {
 
 // --- SERVER START ---
 // Export app for Vercel
-module.exports = app;
+export default app;
 
-// Only listen if running directly (locally)
-if (require.main === module) {
+// Only listen if running directly (locally), detected by checking if this file is the main module
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const PORT = process.env.PORT || 4000;
   app.listen(PORT, () => {
     console.log(`Unified Thekedaar API running on port ${PORT}`);

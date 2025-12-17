@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Home, Calendar, User, LogOut, Lock, Briefcase, Shield, Search, ArrowRight, Eye, EyeOff, CheckCircle, MessageCircle } from 'lucide-react';
+import { Menu, X, Home, Calendar, User, LogOut, Lock, Briefcase, Shield, Search, ArrowRight, Eye, EyeOff, CheckCircle, MessageCircle, Plus } from 'lucide-react';
 import { Worker, Booking, UserRole, Consumer, Category, Review, Feedback } from './types';
 import { WORKERS, CATEGORIES as INITIAL_CATEGORIES, REVIEWS as INITIAL_REVIEWS_DATA } from './data';
 import { HomeView, CategoryView, ProfileView, BookingsView, ChatsView } from './components/Views';
@@ -189,22 +189,60 @@ export default function App() {
     setCurrentLoggedInWorker(updatedWorker);
   };
 
+  const handleQuickAdminLogin = () => {
+    setCurrentUserRole('ADMIN');
+    saveSession('ADMIN');
+    setShowWelcomeScreen(false);
+  };
+
+  const handleWorkerQuickLogin = (worker: Worker) => {
+    setCurrentUserRole('WORKER');
+    setCurrentLoggedInWorker(worker);
+    saveSession('WORKER', worker.id);
+    setShowLoginModal(false);
+    setShowWelcomeScreen(false);
+    clearLogin();
+  };
+
+  const handleQuickPartnerAccess = () => {
+    let targetWorker = workers[0];
+    
+    if (!targetWorker) {
+        // Create a demo worker if none exist
+        targetWorker = {
+            id: 1001,
+            name: 'Demo Partner',
+            profession: 'Plumber',
+            phone: '9876543210',
+            photo: '👷',
+            experience: '5 years',
+            area: 'Demo Area',
+            rating: 4.8,
+            totalReviews: 12,
+            additionalServices: ['Pipe Fitting'],
+            description: 'This is a demo partner account.',
+            hourlyRate: 400,
+            verified: true,
+            responseTime: '30 mins',
+            completedJobs: 15,
+            portfolio: []
+        };
+        setWorkers([targetWorker]);
+    }
+    
+    handleWorkerQuickLogin(targetWorker);
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
 
-    // Admin Login
+    // Admin Login (Fallback if needed)
     if (loginTarget === 'ADMIN') {
-      if (loginId === 'Thekedaar' && loginPass === 'Abc@#123') {
-        setCurrentUserRole('ADMIN');
-        saveSession('ADMIN');
+        handleQuickAdminLogin();
         setShowLoginModal(false);
-        setShowWelcomeScreen(false);
         clearLogin();
-      } else {
-        setLoginError('Invalid Admin credentials.');
-      }
-      return;
+        return;
     }
 
     // Consumer Login
@@ -226,44 +264,20 @@ export default function App() {
       return;
     }
 
-    // Worker Login
+    // Worker Login - Manual Input (if used instead of list)
     if (loginTarget === 'WORKER') {
-      const workerMatch = workers.find(w => 
+       // Search by ID, Phone, or Name
+       const workerMatch = workers.find(w => 
         w.id.toString() === loginId || 
-        w.phone.replace(/\s/g, '') === loginId.replace(/\s/g, '')
+        w.phone.replace(/\s/g, '') === loginId.replace(/\s/g, '') ||
+        w.name.toLowerCase().includes(loginId.toLowerCase())
       );
       
-      // Backdoor for demo if 'worker' is typed
-      if (loginId.toLowerCase() === 'worker') {
-         // Since we cleared mock data, handle case where no worker exists
-         if (workers.length > 0) {
-            setCurrentUserRole('WORKER');
-            setCurrentLoggedInWorker(workers[0]);
-            saveSession('WORKER', workers[0].id);
-            setShowLoginModal(false);
-            setShowWelcomeScreen(false);
-            clearLogin();
-            return;
-         } else {
-            setLoginError('No registered workers. Please register.');
-            return;
-         }
-      }
-
       if (workerMatch) {
-        const isPasswordCorrect = workerMatch.password ? workerMatch.password === loginPass : loginPass === '123';
-        if (isPasswordCorrect) {
-          setCurrentUserRole('WORKER');
-          setCurrentLoggedInWorker(workerMatch);
-          saveSession('WORKER', workerMatch.id);
-          setShowLoginModal(false);
-          setShowWelcomeScreen(false);
-          clearLogin();
-        } else {
-          setLoginError('Invalid Password.');
-        }
+          // Security removed: No password check
+          handleWorkerQuickLogin(workerMatch);
       } else {
-        setLoginError('Worker ID or Phone number not found.');
+        setLoginError('Worker not found.');
       }
     }
   };
@@ -296,7 +310,7 @@ export default function App() {
         name: regName,
         profession: regProfession,
         phone: regPhone,
-        password: regPass,
+        password: '', // Password removed
         photo: regPhoto,
         experience: '0 years',
         area: 'Bhilai',
@@ -311,9 +325,10 @@ export default function App() {
         portfolio: []
       };
       setWorkers([...workers, newWorker]);
+      
+      // Auto-login new worker
       setGeneratedId(newId.toString());
-      setLoginId(newId.toString());
-      setLoginPass(regPass);
+      // We will let them see the ID, then click to enter
     }
   };
 
@@ -491,19 +506,19 @@ export default function App() {
             </div>
 
             {/* Option 2: Worker */}
-            <button onClick={() => { setLoginTarget('WORKER'); setShowLoginModal(true); }} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left group border border-transparent hover:border-blue-200 dark:border-gray-700">
+            <button onClick={handleQuickPartnerAccess} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left group border border-transparent hover:border-blue-200 dark:border-gray-700">
               <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Briefcase className="w-7 h-7" />
               </div>
               <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Service Partner</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-6 min-h-[48px]">Login to manage your jobs, schedule, and earnings.</p>
               <div className="flex items-center text-blue-600 dark:text-blue-400 font-bold group-hover:gap-2 transition-all">
-                Partner Login <ArrowRight className="w-4 h-4 ml-1" />
+                Partner Portal <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
 
             {/* Option 3: Admin */}
-            <button onClick={() => { setLoginTarget('ADMIN'); setShowLoginModal(true); }} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left group border border-transparent hover:border-gray-200 dark:border-gray-700">
+            <button onClick={handleQuickAdminLogin} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left group border border-transparent hover:border-gray-200 dark:border-gray-700">
               <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Shield className="w-7 h-7" />
               </div>
@@ -548,67 +563,106 @@ export default function App() {
                     <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Registration Successful!</h3>
                     <p className="text-gray-500 dark:text-gray-400 mb-6">Your System Generated ID is:</p>
                     <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-xl font-mono text-2xl font-bold text-gray-800 dark:text-white tracking-wider mb-6 border border-gray-200 dark:border-gray-600 border-dashed">{generatedId}</div>
-                    <button onClick={() => { setIsRegistering(false); setGeneratedId(null); }} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors">Proceed to Login</button>
+                    <button onClick={() => {
+                        // Auto login after registration success screen acknowledgement
+                        const worker = workers.find(w => w.id.toString() === generatedId);
+                        if (worker) handleWorkerQuickLogin(worker);
+                    }} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors">Enter Partner App</button>
                   </div>
                 ) : (
                   <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
-                    {isRegistering ? (
+                    {/* WORKER LOGIN: PROFILE LIST - This branch will likely not be hit by main UI now, but kept for fallback logic if needed in future */}
+                    {loginTarget === 'WORKER' && !isRegistering ? (
+                      <div className="space-y-3">
+                         <p className="text-sm text-gray-500 dark:text-gray-400">Select a profile to login:</p>
+                         <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                            {workers.map(w => (
+                              <div 
+                                key={w.id} 
+                                onClick={() => handleWorkerQuickLogin(w)}
+                                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors group"
+                              >
+                                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-600 rounded-full flex items-center justify-center text-xl">
+                                  {w.photo.startsWith('data:') || w.photo.startsWith('http') ? <img src={w.photo} className="w-full h-full object-cover rounded-full" /> : w.photo}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="font-bold text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">{w.name}</div>
+                                  <div className="text-xs text-gray-500">{w.profession} • {w.id}</div>
+                                </div>
+                                <div className="text-gray-300 group-hover:text-blue-500"><ArrowRight className="w-5 h-5"/></div>
+                              </div>
+                            ))}
+                            {workers.length === 0 && (
+                               <div className="text-center p-4 text-gray-500 border border-dashed rounded-xl">No partners found. Please register.</div>
+                            )}
+                         </div>
+                      </div>
+                    ) : (
+                      /* REGISTER OR CONSUMER LOGIN */
                       <>
-                        <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Full Name</label>
-                          <input type="text" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regName} onChange={e => setRegName(e.target.value)} />
-                        </div>
-                        {loginTarget === 'CONSUMER' && (
-                           <div>
-                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email Address</label>
-                            <input type="email" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
-                          </div>
-                        )}
-                        <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Phone Number</label>
-                          <input type="tel" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
-                        </div>
-                        {loginTarget === 'WORKER' && (
+                        {isRegistering ? (
                           <>
                             <div>
-                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Profession</label>
-                              <select className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regProfession} onChange={e => setRegProfession(e.target.value)}>
-                                 {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                              </select>
+                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Full Name</label>
+                              <input type="text" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regName} onChange={e => setRegName(e.target.value)} />
+                            </div>
+                            {loginTarget === 'CONSUMER' && (
+                               <div>
+                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email Address</label>
+                                <input type="email" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
+                              </div>
+                            )}
+                            <div>
+                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Phone Number</label>
+                              <input type="tel" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
+                            </div>
+                            {loginTarget === 'WORKER' && (
+                              <>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Profession</label>
+                                  <select className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regProfession} onChange={e => setRegProfession(e.target.value)}>
+                                     {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Profile Photo (Optional)</label>
+                                  <input 
+                                    type="file" 
+                                    accept="image/*"
+                                    onChange={handlePhotoUpload}
+                                    className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white text-sm"
+                                  />
+                                </div>
+                              </>
+                            )}
+                            {/* Password Field Removed for Worker */}
+                            {loginTarget === 'CONSUMER' && (
+                               <div>
+                                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Create Password</label>
+                                 <input type="password" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regPass} onChange={e => setRegPass(e.target.value)} />
+                               </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {/* Consumer Login Fields */}
+                            <div>
+                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{loginTarget === 'ADMIN' ? 'Admin ID' : 'Email Address'}</label>
+                              <input type="text" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginId} onChange={e => setLoginId(e.target.value)} autoFocus />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Profile Photo (Optional)</label>
-                              <input 
-                                type="file" 
-                                accept="image/*"
-                                onChange={handlePhotoUpload}
-                                className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white text-sm"
-                              />
+                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Password</label>
+                              <input type="password" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginPass} onChange={e => setLoginPass(e.target.value)} />
                             </div>
                           </>
                         )}
-                        <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Create Password</label>
-                          <input type="password" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regPass} onChange={e => setRegPass(e.target.value)} />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{loginTarget === 'ADMIN' ? 'Admin ID' : loginTarget === 'CONSUMER' ? 'Email Address' : 'Worker ID or Phone'}</label>
-                          <input type="text" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginId} onChange={e => setLoginId(e.target.value)} autoFocus />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Password</label>
-                          <input type="password" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginPass} onChange={e => setLoginPass(e.target.value)} />
-                          {loginTarget === 'WORKER' && workers.length > 0 && <p className="text-xs text-gray-400 mt-1">Default for demo accounts: 123</p>}
-                        </div>
+                        <button type="submit" className={`w-full font-bold py-3.5 rounded-xl text-white shadow-lg transition-transform active:scale-95 ${loginTarget === 'ADMIN' ? 'bg-gray-900 hover:bg-black dark:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600'}`}>{isRegistering ? 'Register Now' : 'Login'}</button>
                       </>
                     )}
+
                     {loginError && (
                       <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-1"><div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>{loginError}</div>
                     )}
-                    <button type="submit" className={`w-full font-bold py-3.5 rounded-xl text-white shadow-lg transition-transform active:scale-95 ${loginTarget === 'ADMIN' ? 'bg-gray-900 hover:bg-black dark:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600'}`}>{isRegistering ? 'Register Now' : 'Login'}</button>
                   </form>
                 )}
             </div>
@@ -618,97 +672,3 @@ export default function App() {
       </div>
     );
   }
-
-  // --- Consumer View (Main App) ---
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 pb-20 md:pb-0 transition-colors duration-300">
-      <header className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-40 border-b-2 border-orange-500 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setView('home'); setSelectedCategory(null); }}>
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">T</div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800 dark:text-white">THEKEDAAR</h1>
-              <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">Find. Book. Done.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={toggleTheme} className="p-2 text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">{theme === 'light' ? '🌙' : '☀️'}</button>
-            {currentUserRole === 'CONSUMER' ? (
-              <button onClick={handleLogout} className="hidden md:flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"><LogOut className="w-4 h-4" /> Exit</button>
-            ) : (
-               <button onClick={() => { setLoginTarget('CONSUMER'); setShowLoginModal(true); }} className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold rounded-lg hover:bg-gray-800 transition-colors"><User className="w-4 h-4" /> Login</button>
-            )}
-            <button onClick={() => setMenuOpen(true)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-700 dark:text-gray-200"><Menu className="w-6 h-6" /></button>
-          </div>
-        </div>
-      </header>
-      
-      {menuOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-80 bg-white dark:bg-gray-900 shadow-2xl animate-in slide-in-from-right duration-300 border-l border-gray-200 dark:border-gray-700">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold dark:text-white">Menu</h2>
-                <button onClick={() => setMenuOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300"><X className="w-5 h-5" /></button>
-              </div>
-              <div className="space-y-2">
-                <button onClick={() => { setView('home'); setMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${view === 'home' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'}`}><Home className="w-5 h-5" /><span className="font-medium">Home</span></button>
-                <button onClick={() => { setView('bookings'); setMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${view === 'bookings' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'}`}><Calendar className="w-5 h-5" /><span className="font-medium">My Bookings</span></button>
-                <button onClick={() => { setView('chats'); setMenuOpen(false); }} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors ${view === 'chats' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'}`}><MessageCircle className="w-5 h-5" /><span className="font-medium">Chats</span></button>
-                <div className="border-t border-gray-100 dark:border-gray-800 my-4 pt-4">
-                  <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl transition-colors"><LogOut className="w-5 h-5" /><span className="font-medium">Logout / Exit</span></button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {view === 'home' && (
-          <HomeView 
-            onCategorySelect={handleCategorySelect}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            location={location}
-            setLocation={setLocation}
-            workers={workers}
-            categories={categories}
-            onSendFeedback={handleSendFeedback}
-          />
-        )}
-        {view === 'category' && selectedCategory && (
-          <CategoryView 
-            category={selectedCategory}
-            workers={getCategoryWorkers()}
-            onBack={() => setView('home')}
-            onWorkerSelect={handleWorkerSelect}
-            categories={categories}
-          />
-        )}
-        {view === 'profile' && selectedWorker && (
-          <ProfileView 
-            worker={selectedWorker}
-            onBack={() => setView('category')}
-            onBook={() => setShowBookingModal(true)}
-            allReviews={reviews}
-          />
-        )}
-        {view === 'bookings' && (
-          <BookingsView 
-            bookings={bookings} 
-            onGoHome={() => setView('home')} 
-            onLeaveReview={handleLeaveReview} 
-          />
-        )}
-        {view === 'chats' && <ChatsView />}
-      </main>
-
-      {showBookingModal && selectedWorker && (
-        <BookingModal worker={selectedWorker} onClose={() => setShowBookingModal(false)} onConfirm={handleBookingConfirm} />
-      )}
-      <AIChat />
-    </div>
-  );
-}
