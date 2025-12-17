@@ -189,66 +189,33 @@ export default function App() {
     setCurrentLoggedInWorker(updatedWorker);
   };
 
-  const handleQuickAdminLogin = () => {
-    setCurrentUserRole('ADMIN');
-    saveSession('ADMIN');
-    setShowWelcomeScreen(false);
-  };
-
-  const handleWorkerQuickLogin = (worker: Worker) => {
-    setCurrentUserRole('WORKER');
-    setCurrentLoggedInWorker(worker);
-    saveSession('WORKER', worker.id);
-    setShowLoginModal(false);
-    setShowWelcomeScreen(false);
-    clearLogin();
-  };
-
-  const handleQuickPartnerAccess = () => {
-    let targetWorker = workers[0];
-    
-    if (!targetWorker) {
-        // Create a demo worker if none exist
-        targetWorker = {
-            id: 1001,
-            name: 'Demo Partner',
-            profession: 'Plumber',
-            phone: '9876543210',
-            photo: '👷',
-            experience: '5 years',
-            area: 'Demo Area',
-            rating: 4.8,
-            totalReviews: 12,
-            additionalServices: ['Pipe Fitting'],
-            description: 'This is a demo partner account.',
-            hourlyRate: 400,
-            verified: true,
-            responseTime: '30 mins',
-            completedJobs: 15,
-            portfolio: []
-        };
-        setWorkers([targetWorker]);
-    }
-    
-    handleWorkerQuickLogin(targetWorker);
-  };
-
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
 
-    // Admin Login (Fallback if needed)
+    // Admin Login
     if (loginTarget === 'ADMIN') {
-        handleQuickAdminLogin();
+      // Hardcoded Admin Credentials for Demo
+      if (loginId === 'admin' && loginPass === 'admin123') {
+        setCurrentUserRole('ADMIN');
+        saveSession('ADMIN');
         setShowLoginModal(false);
+        setShowWelcomeScreen(false);
         clearLogin();
-        return;
+      } else {
+        setLoginError('Invalid Admin ID or Password');
+      }
+      return;
     }
 
     // Consumer Login
     if (loginTarget === 'CONSUMER') {
       const consumer = consumers.find(c => c.email.toLowerCase() === loginId.toLowerCase());
       if (consumer) {
+        if (consumer.password && consumer.password !== loginPass) {
+           setLoginError('Invalid Password');
+           return;
+        }
         if (consumer.status === 'Blocked') {
           setLoginError('Account Blocked. Contact Support.');
           return;
@@ -264,20 +231,29 @@ export default function App() {
       return;
     }
 
-    // Worker Login - Manual Input (if used instead of list)
+    // Worker Login
     if (loginTarget === 'WORKER') {
-       // Search by ID, Phone, or Name
+       // Search by ID or Phone
        const workerMatch = workers.find(w => 
         w.id.toString() === loginId || 
-        w.phone.replace(/\s/g, '') === loginId.replace(/\s/g, '') ||
-        w.name.toLowerCase().includes(loginId.toLowerCase())
+        w.phone.replace(/\s/g, '') === loginId.replace(/\s/g, '')
       );
       
       if (workerMatch) {
-          // Security removed: No password check
-          handleWorkerQuickLogin(workerMatch);
+          // Check Password (if set) - Default to allow empty or '123' if not set in older data
+          const validPass = workerMatch.password || '123';
+          if (loginPass === validPass) {
+             setCurrentUserRole('WORKER');
+             setCurrentLoggedInWorker(workerMatch);
+             saveSession('WORKER', workerMatch.id);
+             setShowLoginModal(false);
+             setShowWelcomeScreen(false);
+             clearLogin();
+          } else {
+             setLoginError('Invalid Password');
+          }
       } else {
-        setLoginError('Worker not found.');
+        setLoginError('Worker ID or Phone not found.');
       }
     }
   };
@@ -292,7 +268,8 @@ export default function App() {
         email: regEmail,
         phone: regPhone,
         joinDate: new Date().toISOString().split('T')[0],
-        status: 'Active'
+        status: 'Active',
+        password: regPass
       };
       setConsumers([...consumers, newConsumer]);
       setCurrentUserRole('CONSUMER');
@@ -310,7 +287,7 @@ export default function App() {
         name: regName,
         profession: regProfession,
         phone: regPhone,
-        password: '', // Password removed
+        password: regPass,
         photo: regPhoto,
         experience: '0 years',
         area: 'Bhilai',
@@ -325,10 +302,7 @@ export default function App() {
         portfolio: []
       };
       setWorkers([...workers, newWorker]);
-      
-      // Auto-login new worker
       setGeneratedId(newId.toString());
-      // We will let them see the ID, then click to enter
     }
   };
 
@@ -506,26 +480,26 @@ export default function App() {
             </div>
 
             {/* Option 2: Worker */}
-            <button onClick={handleQuickPartnerAccess} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left group border border-transparent hover:border-blue-200 dark:border-gray-700">
+            <button onClick={() => { setLoginTarget('WORKER'); setShowLoginModal(true); }} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left group border border-transparent hover:border-blue-200 dark:border-gray-700">
               <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Briefcase className="w-7 h-7" />
               </div>
               <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Service Partner</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-6 min-h-[48px]">Login to manage your jobs, schedule, and earnings.</p>
               <div className="flex items-center text-blue-600 dark:text-blue-400 font-bold group-hover:gap-2 transition-all">
-                Partner Portal <ArrowRight className="w-4 h-4 ml-1" />
+                Partner Login <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
 
             {/* Option 3: Admin */}
-            <button onClick={handleQuickAdminLogin} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left group border border-transparent hover:border-gray-200 dark:border-gray-700">
+            <button onClick={() => { setLoginTarget('ADMIN'); setShowLoginModal(true); }} className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-left group border border-transparent hover:border-gray-200 dark:border-gray-700">
               <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Shield className="w-7 h-7" />
               </div>
               <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Admin Portal</h3>
               <p className="text-gray-500 dark:text-gray-400 mb-6 min-h-[48px]">System administration, reports, and user management.</p>
               <div className="flex items-center text-gray-700 dark:text-gray-300 font-bold group-hover:gap-2 transition-all">
-                Admin Access <ArrowRight className="w-4 h-4 ml-1" />
+                Admin Login <ArrowRight className="w-4 h-4 ml-1" />
               </div>
             </button>
           </div>
@@ -544,7 +518,7 @@ export default function App() {
                 
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-                    {loginTarget === 'ADMIN' ? 'Admin Access' : 
+                    {loginTarget === 'ADMIN' ? 'Admin Login' : 
                      loginTarget === 'CONSUMER' ? (isRegistering ? 'Create Account' : 'User Login') :
                      (isRegistering ? 'Partner Registration' : 'Partner Login')}
                   </h2>
@@ -564,98 +538,64 @@ export default function App() {
                     <p className="text-gray-500 dark:text-gray-400 mb-6">Your System Generated ID is:</p>
                     <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-xl font-mono text-2xl font-bold text-gray-800 dark:text-white tracking-wider mb-6 border border-gray-200 dark:border-gray-600 border-dashed">{generatedId}</div>
                     <button onClick={() => {
-                        // Auto login after registration success screen acknowledgement
-                        const worker = workers.find(w => w.id.toString() === generatedId);
-                        if (worker) handleWorkerQuickLogin(worker);
-                    }} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors">Enter Partner App</button>
+                        setIsRegistering(false);
+                        setGeneratedId(null);
+                        setLoginId(generatedId);
+                    }} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors">Go to Login</button>
                   </div>
                 ) : (
                   <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-4">
-                    {/* WORKER LOGIN: PROFILE LIST - This branch will likely not be hit by main UI now, but kept for fallback logic if needed in future */}
-                    {loginTarget === 'WORKER' && !isRegistering ? (
-                      <div className="space-y-3">
-                         <p className="text-sm text-gray-500 dark:text-gray-400">Select a profile to login:</p>
-                         <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                            {workers.map(w => (
-                              <div 
-                                key={w.id} 
-                                onClick={() => handleWorkerQuickLogin(w)}
-                                className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors group"
-                              >
-                                <div className="w-10 h-10 bg-gray-100 dark:bg-gray-600 rounded-full flex items-center justify-center text-xl">
-                                  {w.photo.startsWith('data:') || w.photo.startsWith('http') ? <img src={w.photo} className="w-full h-full object-cover rounded-full" /> : w.photo}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="font-bold text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">{w.name}</div>
-                                  <div className="text-xs text-gray-500">{w.profession} • {w.id}</div>
-                                </div>
-                                <div className="text-gray-300 group-hover:text-blue-500"><ArrowRight className="w-5 h-5"/></div>
-                              </div>
-                            ))}
-                            {workers.length === 0 && (
-                               <div className="text-center p-4 text-gray-500 border border-dashed rounded-xl">No partners found. Please register.</div>
-                            )}
-                         </div>
-                      </div>
-                    ) : (
-                      /* REGISTER OR CONSUMER LOGIN */
+                    {isRegistering ? (
                       <>
-                        {isRegistering ? (
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Full Name</label>
+                          <input type="text" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regName} onChange={e => setRegName(e.target.value)} />
+                        </div>
+                        {loginTarget === 'CONSUMER' && (
+                           <div>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email Address</label>
+                            <input type="email" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Phone Number</label>
+                          <input type="tel" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
+                        </div>
+                        {loginTarget === 'WORKER' && (
                           <>
                             <div>
-                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Full Name</label>
-                              <input type="text" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regName} onChange={e => setRegName(e.target.value)} />
-                            </div>
-                            {loginTarget === 'CONSUMER' && (
-                               <div>
-                                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email Address</label>
-                                <input type="email" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regEmail} onChange={e => setRegEmail(e.target.value)} />
-                              </div>
-                            )}
-                            <div>
-                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Phone Number</label>
-                              <input type="tel" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regPhone} onChange={e => setRegPhone(e.target.value)} />
-                            </div>
-                            {loginTarget === 'WORKER' && (
-                              <>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Profession</label>
-                                  <select className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regProfession} onChange={e => setRegProfession(e.target.value)}>
-                                     {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Profile Photo (Optional)</label>
-                                  <input 
-                                    type="file" 
-                                    accept="image/*"
-                                    onChange={handlePhotoUpload}
-                                    className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white text-sm"
-                                  />
-                                </div>
-                              </>
-                            )}
-                            {/* Password Field Removed for Worker */}
-                            {loginTarget === 'CONSUMER' && (
-                               <div>
-                                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Create Password</label>
-                                 <input type="password" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regPass} onChange={e => setRegPass(e.target.value)} />
-                               </div>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            {/* Consumer Login Fields */}
-                            <div>
-                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{loginTarget === 'ADMIN' ? 'Admin ID' : 'Email Address'}</label>
-                              <input type="text" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginId} onChange={e => setLoginId(e.target.value)} autoFocus />
+                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Profession</label>
+                              <select className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regProfession} onChange={e => setRegProfession(e.target.value)}>
+                                 {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                              </select>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Password</label>
-                              <input type="password" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginPass} onChange={e => setLoginPass(e.target.value)} />
+                              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Profile Photo (Optional)</label>
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white text-sm"
+                              />
                             </div>
                           </>
                         )}
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Create Password</label>
+                          <input type="password" required className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={regPass} onChange={e => setRegPass(e.target.value)} />
+                        </div>
+                        <button type="submit" className={`w-full font-bold py-3.5 rounded-xl text-white shadow-lg transition-transform active:scale-95 ${loginTarget === 'ADMIN' ? 'bg-gray-900 hover:bg-black dark:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600'}`}>Register Now</button>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{loginTarget === 'ADMIN' ? 'Admin ID' : loginTarget === 'CONSUMER' ? 'Email Address' : 'Partner ID / Phone'}</label>
+                          <input type="text" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginId} onChange={e => setLoginId(e.target.value)} autoFocus />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Password</label>
+                          <input type="password" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginPass} onChange={e => setLoginPass(e.target.value)} />
+                        </div>
                         <button type="submit" className={`w-full font-bold py-3.5 rounded-xl text-white shadow-lg transition-transform active:scale-95 ${loginTarget === 'ADMIN' ? 'bg-gray-900 hover:bg-black dark:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600'}`}>{isRegistering ? 'Register Now' : 'Login'}</button>
                       </>
                     )}
