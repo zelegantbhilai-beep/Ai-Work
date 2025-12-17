@@ -195,7 +195,6 @@ export default function App() {
 
     // Admin Login
     if (loginTarget === 'ADMIN') {
-      // Hardcoded Admin Credentials for Demo
       if (loginId === 'admin' && loginPass === 'admin123') {
         setCurrentUserRole('ADMIN');
         saveSession('ADMIN');
@@ -588,6 +587,12 @@ export default function App() {
                       </>
                     ) : (
                       <>
+                        {loginTarget === 'ADMIN' && (
+                          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs rounded-xl mb-4 border border-blue-100 dark:border-blue-800 flex items-center gap-2">
+                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>
+                             <span>Demo Access: <strong>admin</strong> / <strong>admin123</strong></span>
+                          </div>
+                        )}
                         <div>
                           <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{loginTarget === 'ADMIN' ? 'Admin ID' : loginTarget === 'CONSUMER' ? 'Email Address' : 'Partner ID / Phone'}</label>
                           <input type="text" className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all" value={loginId} onChange={e => setLoginId(e.target.value)} autoFocus />
